@@ -1,0 +1,66 @@
+name: Build Go Binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  BINARY: paperlesslink
+  BUILD_DIR: bin
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+          - goos: windows
+            goarch: amd64
+            suffix: windows-amd64.exe
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          mkdir -p $BUILD_DIR
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+          go build -ldflags "-X main.version=$VERSION" \
+          -o $BUILD_DIR/$BINARY-${{ matrix.suffix }} .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.suffix }}
+          path: ${{ env.BUILD_DIR }}/${{ env.BINARY }}-${{ matrix.suffix }}
+          
