@@ -10,7 +10,7 @@ on:
 
 env:
   BINARY: paperlesslink
-  BUILD_DIR: bin
+  # BUILD_DIR: bin
 
 jobs:
   build:
@@ -49,13 +49,12 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p $BUILD_DIR
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
           go build -ldflags "-X main.version=$VERSION" \
-          -o $BUILD_DIR/$BINARY-${{ matrix.suffix }} .
+          -o $BINARY-${{ matrix.suffix }} .
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.suffix }}
-          path: ${{ env.BUILD_DIR }}/${{ env.BINARY }}-${{ matrix.suffix }}
+          path: ${{ env.BINARY }}-${{ matrix.suffix }}
           
