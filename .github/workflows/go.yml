@@ -1,19 +1,16 @@
-name: Build Go Binaries
+name: Release Go Binary
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
-  pull_request:
 
 env:
   BINARY: paperlesslink
-  # BUILD_DIR: bin
+  BUILD_DIR: bin
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     strategy:
@@ -37,24 +34,29 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
 
-      - name: Determine version
-        run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
       - name: Build
         run: |
+          mkdir -p $BUILD_DIR
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
           go build -ldflags "-X main.version=$VERSION" \
-          -o $BINARY-${{ matrix.suffix }} .
+          -o $BUILD_DIR/$BINARY-${{ matrix.suffix }} .
 
-      - uses: actions/upload-artifact@v4
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ${{ matrix.suffix }}
-          path: ${{ env.BINARY }}-${{ matrix.suffix }}
+          name: ${{ env.VERSION }}
+          generate_release_notes: true
+          files: bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
